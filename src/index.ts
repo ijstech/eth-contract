@@ -1,5 +1,5 @@
 import {BigNumber} from "bignumber.js";
-
+export {BigNumber};
 export interface IWalletUtils{
     fromWei(value: any, unit?: string): string;
     toUtf8(value: any): string;		
