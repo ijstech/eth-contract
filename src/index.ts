@@ -1,7 +1,8 @@
 import {BigNumber} from "bignumber.js";
 export {BigNumber};
-export interface IWalletUtils{
+export interface IWalletUtils{    
     fromWei(value: any, unit?: string): string;
+    hexToUtf8(value: string): string;
     toUtf8(value: any): string;		
     toWei(value: string, unit?: string): string;
 };
@@ -77,12 +78,120 @@ export interface Transaction{
 export interface EventType{
     name: string
 }
+export class Utils {
+    private wallet: IWallet;
+    public nullAddress = "0x0000000000000000000000000000000000000000";
+    constructor(wallet: IWallet){
+        this.wallet = wallet;
+    };
+    asciiToHex(str: string): string{
+        if(!str)
+            return "0x00";
+        var hex = "";
+        for(var i = 0; i < str.length; i++) {
+            var code = str.charCodeAt(i);
+            var n = code.toString(16);
+            hex += n.length < 2 ? '0' + n : n;
+        };
+        return "0x" + hex;
+    };
+    sleep(millisecond: number){
+        return new Promise(function(resolve){
+            setTimeout(function(){
+                resolve(null);
+            },millisecond);
+        });
+    };
+    numberToBytes32(value: number|BigNumber, prefix?:boolean) {
+        let v = new BigNumber(value).toString(16)
+        v = v.replace("0x", "");
+        v = this.padLeft(v, 64);
+        if (prefix)
+            v = '0x' + v
+        return v;
+    };
+    padLeft(string: string, chars: number, sign?: string): string{
+        return new Array(chars - string.length + 1).join(sign ? sign : "0") + string;
+    };
+    padRight(string: string, chars: number, sign?: string): string{
+        return string + new Array(chars - string.length + 1).join(sign ? sign : "0");
+    };
+    stringToBytes32(value: string|string[]): string|string[]{
+        if (Array.isArray(value)){
+            let result = [];
+            for (let i = 0; i < value.length; i ++){
+                result.push(this.stringToBytes32(value[i]));
+            }
+            return result;
+        }
+        else{
+            if (value.length == 66 && value.startsWith('0x'))
+                return value;
+            return this.padRight(this.asciiToHex(value),64)
+        }
+    }
+    addressToBytes32(value: string, prefix?: boolean): string{
+        let v = value
+        v = v.replace("0x", "");
+        v = this.padLeft(v, 64);
+        if (prefix)
+            v = '0x' + v;
+        return v;
+    };
+    bytes32ToAddress(value: string): string{
+        return '0x' + value.replace('0x000000000000000000000000','');
+    };
+    bytes32ToString(value: string): string{
+        return this.wallet.utils.hexToUtf8(value);
+    };
+    addressToBytes32Right(value: string, prefix?: boolean): string{
+        let v = value
+        v = v.replace("0x", "");
+        v = this.padRight(v, 64);
+        if (prefix)
+            v = '0x' + v;
+        return v;
+    };
+    toNumber(value: string|number|BigNumber): number{
+        if (typeof(value) == 'number')
+            return value
+        else if (typeof(value) == 'string')
+            return new BigNumber(value).toNumber()
+        else
+            return value.toNumber()
+    };
+    toDecimals(value: BigNumber|number|string, decimals?: number): BigNumber{    
+        decimals = decimals || 18;
+        return new BigNumber(value).shiftedBy(decimals);
+    };
+    fromDecimals(value: BigNumber|number|string, decimals?: number): BigNumber{
+        decimals = decimals || 18;
+        return new BigNumber(value).shiftedBy(-decimals);
+    };
+    toString(value:any){
+        if (Array.isArray(value)){
+            let result = [];
+            for (let i = 0; i < value.length; i ++){
+                if (typeof value[i] === "number" || BigNumber.isBigNumber(value[i]))
+                    result.push(value[i].toString(10))
+                else
+                    result.push(value[i]);
+            }
+            return result;
+        }
+        else if (typeof value === "number" || BigNumber.isBigNumber(value))
+            return value.toString(10);
+        else
+            return value;
+    };
+};
 export class Contract {
     public wallet: IWallet;
     public _abi: any;
     public _bytecode: any;
     public _address: string;
     private _events: any;
+    private _utils: Utils;
     public privateKey: string;
     
     constructor(wallet: IWallet, address?: string, abi?: any, bytecode?: any) {            
@@ -216,6 +325,11 @@ export class Contract {
         this._address = await this.wallet.methods.apply(this.wallet, args);
         return this._address;
     };
+    get utils(): Utils{
+        if (!this._utils)
+            this._utils = new Utils(this.wallet);
+        return this._utils;
+    }
 };
 export class TAuthContract extends Contract {
     rely(address: string): Promise<any>{

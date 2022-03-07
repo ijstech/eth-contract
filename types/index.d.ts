@@ -2,6 +2,7 @@ import { BigNumber } from "bignumber.js";
 export { BigNumber };
 export interface IWalletUtils {
     fromWei(value: any, unit?: string): string;
+    hexToUtf8(value: string): string;
     toUtf8(value: any): string;
     toWei(value: string, unit?: string): string;
 }
@@ -80,12 +81,32 @@ export interface Transaction {
 export interface EventType {
     name: string;
 }
+export declare class Utils {
+    private wallet;
+    nullAddress: string;
+    constructor(wallet: IWallet);
+    asciiToHex(str: string): string;
+    sleep(millisecond: number): Promise<unknown>;
+    numberToBytes32(value: number | BigNumber, prefix?: boolean): string;
+    padLeft(string: string, chars: number, sign?: string): string;
+    padRight(string: string, chars: number, sign?: string): string;
+    stringToBytes32(value: string | string[]): string | string[];
+    addressToBytes32(value: string, prefix?: boolean): string;
+    bytes32ToAddress(value: string): string;
+    bytes32ToString(value: string): string;
+    addressToBytes32Right(value: string, prefix?: boolean): string;
+    toNumber(value: string | number | BigNumber): number;
+    toDecimals(value: BigNumber | number | string, decimals?: number): BigNumber;
+    fromDecimals(value: BigNumber | number | string, decimals?: number): BigNumber;
+    toString(value: any): any;
+}
 export declare class Contract {
     wallet: IWallet;
     _abi: any;
     _bytecode: any;
     _address: string;
     private _events;
+    private _utils;
     privateKey: string;
     constructor(wallet: IWallet, address?: string, abi?: any, bytecode?: any);
     at(address: string): Contract;
@@ -103,6 +124,7 @@ export declare class Contract {
     protected getAbiEvents(): any;
     scanEvents(fromBlock: number, toBlock: number | string, eventNames?: string[]): Promise<Event[]>;
     _deploy(...args: any[]): Promise<string>;
+    get utils(): Utils;
 }
 export declare class TAuthContract extends Contract {
     rely(address: string): Promise<any>;
