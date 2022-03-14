@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 'use strict';
-
+console.dir('### compiler')
 const fs = require('fs');
 const path = require('path');
 const solcWrapper = require("solc/wrapper");
