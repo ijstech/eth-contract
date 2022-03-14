@@ -5,11 +5,10 @@
         "compile": "bin/compiler.js"
     },
     "dependencies": {
-        "bignumber.js": "9.0.1",
-        "solc": "0.8.12"
+        "bignumber.js": "9.0.1"        
     },
     "devDependencies": {
-        "typescript": "4.2.4"
+        "solc": "0.8.12"
     },
     "main": "lib/index.js",
     "types": "types/index.d.ts",
