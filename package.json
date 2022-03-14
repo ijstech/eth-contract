@@ -1,6 +1,9 @@
 {
     "name": "@ijstech/eth-contract",
     "version": "0.1.0",
+    "bin": {
+        "eth-contract": "bin/compiler.js"
+    },
     "dependencies": {
         "bignumber.js": "9.0.1"
     },
