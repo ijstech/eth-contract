@@ -5,7 +5,8 @@
         "eth-contract": "bin/compiler.js"
     },
     "dependencies": {
-        "bignumber.js": "9.0.1"
+        "bignumber.js": "9.0.1",
+        "solc": "0.8.12"
     },
     "devDependencies": {
         "typescript": "4.2.4"

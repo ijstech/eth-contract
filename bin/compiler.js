@@ -6,9 +6,11 @@ const fs = require('fs');
 const path = require('path');
 const solcWrapper = require("solc/wrapper");
 const https = require('https');
+
 const SolcjsPath = path.resolve(__dirname, 'solcjs');
 const codeGen = require('./codeGen');
 const RootPath = process.env.PWD;
+
 /*
 https://solc-bin.ethereum.org/bin/list.json
 https://ethereum.github.io/solc-bin/bin/list.json
@@ -90,7 +92,7 @@ function recursiveAdd(root, srcPath, sources) {
             if (sources[files[i]]) {
                 console.log(files[i] + " already exists");
             } else {
-                let _path = path.join(root, srcPath, files[i]).replace(/\\/g, "/").replace(/^([A-Za-z]):/, "/$1");
+                let _path = path.join(srcPath, files[i]).replace(/\\/g, "/").replace(/^([A-Za-z]):/, "/$1");
                 sources[_path.replace(new RegExp(`^${root}`),'contracts/')] = { content: fs.readFileSync(path.resolve(currPath, files[i]), "utf8") };
             }
         }
@@ -102,7 +104,7 @@ function recursiveAdd(root, srcPath, sources) {
     }
     return sources;
 }
-function buildInput(root, source) {
+function buildInput(root, source) {    
     let input = {
         language: "Solidity",
         sources: {},
@@ -175,6 +177,7 @@ function prettyPrint1(s) {
     }).join('');
 }
 function processOutput(output, outputDir) {
+    let index = '';
     if (output.contracts) {
         for (let i in output.contracts) {
             let p = path.dirname(i.replace(/^contracts\//,''));
@@ -191,24 +194,27 @@ function processOutput(output, outputDir) {
                     }, null, 4));
                     let code = codeGen(j, `./${j}.json.ts`, output.contracts[i][j].abi);
                     fs.writeFileSync(outputDir + '/' + p + j +  '.ts', code);
+                    index += `export { ${j} } from \'./${j}\';\n`;
                 }
             }
         }
     }
+    return index;
 }
 async function main(solVersion, contractDir, outputDir) {
     if (!contractDir.endsWith('/') && !contractDir.endsWith('.sol'))
         contractDir = contractDir + '/';
     if (!outputDir)
-        outputDir = path.join(contractDir, 'bin');
+        outputDir = contractDir;
     
-    fs.mkdirSync(path.join(RootPath, outputDir), { recursive: true });
+    fs.mkdirSync(outputDir, { recursive: true });
     
     try {
         let solc = await getSolc(solVersion);        
         let input = buildInput(contractDir, null);
         let output = JSON.parse(solc.compile(JSON.stringify(input), { import: findImports }));
-        processOutput(output, outputDir);
+        let index = processOutput(output, outputDir);
+        fs.writeFileSync(path.join(outputDir, '/index.ts'), index);        
         if (output.errors) {
             output.errors/*.filter(e=>e.severity!='warning')*/.forEach(e => console.log(e.formattedMessage));
         }
