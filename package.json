@@ -1,6 +1,6 @@
 {
     "name": "@ijstech/eth-contract",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "bin": {
         "eth-contract": "bin/compiler.js"
     },
