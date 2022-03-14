@@ -3,13 +3,7 @@
     "version": "0.1.0",
     "bin": {
         "compile": "bin/compiler.js"
-    },
-    "dependencies": {
-        "bignumber.js": "9.0.1"        
-    },
-    "devDependencies": {
-        "solc": "0.8.12"
-    },
+    },    
     "main": "lib/index.js",
     "types": "types/index.d.ts",
     "scripts": {
