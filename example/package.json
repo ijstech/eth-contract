@@ -1,0 +1,12 @@
+{
+    "name": "example",
+    "version": "0.1.0",
+    "dependencies": {
+        "@ijstech/eth-contract": "file:../"        
+    },
+    "scripts": {
+        "_build:contracts": "ts-node ../bin/compile.ts solidity.config.json",
+        "build:contracts": "sol2ts solidity.config.json",
+        "build:lib": "tsc"
+    }
+}
