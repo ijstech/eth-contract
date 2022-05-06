@@ -1,0 +1,21 @@
+{
+    "name": "example",
+    "version": "0.1.0",
+    "devDependencies": {
+        "@ijstech/eth-contract": "file:../",
+        "@ijstech/eth-wallet": "git+https://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:x-oauth-basic@github.com/ijstech/eth-wallet.git",
+        "@types/chai": "4.2.18",
+        "@types/mocha": "9.0.0",
+        "chai": "4.3.4",
+        "chai-bignumber": "3.0.0",
+        "ganache-cli": "6.12.2",
+        "mocha": "9.0.3",
+        "ts-node": "10.1.0",
+        "tsconfig-paths": "3.10.1"
+    },
+    "scripts": {
+        "build:contracts": "sol2ts solidity.config.json",
+        "build:lib": "tsc",
+        "test": "mocha --exit --require ts-node/register -r tsconfig-paths/register --timeout 1000000 ./test/*.test.ts"
+    }
+}
