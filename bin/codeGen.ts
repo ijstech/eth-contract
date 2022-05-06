@@ -298,11 +298,11 @@ export default function(name: string, abiPath: string, abi: Item[], hasBytecode:
             let input = (item.inputs.length > 0) ? `[${toSolidityInput(item)}]` : "";
             let _payable = item.stateMutability=='payable'?((item.inputs.length==0?", []":"")+', {value:_value}'):'';
             addLine(1, `deploy(${inputs(item)}${payable(item)}): Promise<string>{`);
-            addLine(2, `return this.__deploy(${input}${_payable});`);
+            addLine(2, `return this._deploy(${input}${_payable});`);
             addLine(1, `}`);
         } else {
             addLine(1, `deploy(): Promise<string>{`);
-            addLine(2, `return this.__deploy();`);
+            addLine(2, `return this._deploy();`);
             addLine(1, `}`);
         }
     }

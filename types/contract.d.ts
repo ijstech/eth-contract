@@ -29,10 +29,8 @@ declare module Contract {
         protected call(methodName: string, params?: any[], options?: any): Promise<any>;
         protected txObj(methodName: string, params?: any[], options?: any): Promise<Transaction>;
         private _send;
-        protected __deploy(params?: any[], options?: any): Promise<string>;
+        protected _deploy(params?: any[], options?: any): Promise<string>;
         protected send(methodName: string, params?: any[], options?: any): Promise<TransactionReceipt>;
-        protected _deploy(...params: any[]): Promise<string>;
-        protected methods(methodName: string, ...params: any[]): Promise<any>;
     }
 }
 export = Contract;

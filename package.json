@@ -2,7 +2,7 @@
     "name": "@ijstech/eth-contract",
     "version": "0.1.0",
     "bin": {
-        "sol2ts": "bin/compiler.ts"
+        "sol2ts": "bin/compile.ts"
     },
     "dependencies": {
         "bignumber.js": "9.0.1"        

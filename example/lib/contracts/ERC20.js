@@ -12,7 +12,7 @@ class ERC20 extends eth_contract_1.Contract {
         this.assign();
     }
     deploy(params) {
-        return this.__deploy([params.name, params.symbol, params.minter, this.utils.toString(params.cap)]);
+        return this._deploy([params.name, params.symbol, params.minter, this.utils.toString(params.cap)]);
     }
     parseApprovalEvent(receipt) {
         return this.parseEvents(receipt, "Approval").map(e => this.decodeApprovalEvent(e));

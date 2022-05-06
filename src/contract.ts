@@ -233,7 +233,7 @@ module Contract {
             let receipt = await this.wallet.sendTransaction(tx);
             return receipt;
         }
-        protected async __deploy(params?:any[], options?:any): Promise<string>{
+        protected async _deploy(params?:any[], options?:any): Promise<string>{
             let receipt = await this._send('', params, options);
             this.address = receipt.contractAddress;
             return this.address;
@@ -241,22 +241,6 @@ module Contract {
         protected send(methodName:string, params?:any[], options?:any): Promise<TransactionReceipt>{
             let receipt = this._send(methodName, params, options);
             return receipt;
-        }
-
-        // backward compatability
-        protected _deploy(...params:any[]): Promise<string>{
-            return this.__deploy(params);
-        }
-        protected methods(methodName:string, ...params:any[]) {
-            let method = this._abi.find(e=>e.name==methodName);
-            if (method.stateMutability == "view" || method.stateMutability == "pure") {
-                return this.call(methodName, params);
-            } else if (method.stateMutability=='payable') {
-                let value = params.pop();
-                return this.call(methodName, params, {value:value});
-            } else {
-                return this.send(methodName, params);
-            }
         }
     }
 }

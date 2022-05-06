@@ -7,7 +7,7 @@ export class ERC20 extends Contract{
         this.assign()
     }
     deploy(params:{name:string,symbol:string,minter:string,cap:number|BigNumber}): Promise<string>{
-        return this.__deploy([params.name,params.symbol,params.minter,this.utils.toString(params.cap)]);
+        return this._deploy([params.name,params.symbol,params.minter,this.utils.toString(params.cap)]);
     }
     parseApprovalEvent(receipt: TransactionReceipt): ERC20.ApprovalEvent[]{
         return this.parseEvents(receipt, "Approval").map(e=>this.decodeApprovalEvent(e));
