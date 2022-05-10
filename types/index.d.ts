@@ -5,7 +5,6 @@ export interface IWalletUtils {
     hexToUtf8(value: string): string;
     toUtf8(value: any): string;
     toWei(value: string, unit?: string): string;
-    sha3(string: any): string;
 }
 export interface IWallet {
     address: string;
@@ -15,35 +14,12 @@ export interface IWallet {
         topics: string[];
     }): Event;
     decodeLog(inputs: any, hexString: string, topics: any): any;
+    getAbiEvents(abi: any[]): any;
+    getAbiTopics(abi: any[], eventNames: string[]): any[];
+    methods(...args: any): Promise<any>;
     send(to: string, amount: number): Promise<TransactionReceipt>;
     scanEvents(fromBlock: number, toBlock: number | string, topics?: any, events?: any, address?: string | string[]): Promise<Event[]>;
     utils: IWalletUtils;
-    getChainId(): Promise<number>;
-    registerEvent(eventMap: {
-        [topics: string]: any;
-    }, address: string, handler: any): any;
-    blockGasLimit(): Promise<number>;
-    getGasPrice(): Promise<BigNumber>;
-    transactionCount(): Promise<number>;
-    sendTransaction(transaction: Transaction): Promise<TransactionReceipt>;
-    sendSignedTransaction(signedTransaction: string): Promise<TransactionReceipt>;
-    getTransactionReceipt(transactionHash: string): Promise<TransactionReceipt>;
-    newContract(abi: any, address?: string): IContract;
-    decodeErrorMessage(msg: string): any;
-}
-export interface IContractMethod {
-    call: any;
-    estimateGas(...params: any[]): Promise<number>;
-    encodeABI(): string;
-}
-export interface IContract {
-    deploy(params: {
-        data: string;
-        arguments?: any[];
-    }): IContractMethod;
-    methods: {
-        [methodName: string]: (...params: any[]) => IContractMethod;
-    };
 }
 export interface Event {
     name: string;
@@ -88,14 +64,14 @@ export interface TransactionReceipt {
     blockNumber: number;
     from: string;
     to: string;
-    contractAddress?: string;
+    contractAddress: string;
     cumulativeGasUsed: number;
     gasUsed: number;
     logs?: Array<Log>;
     events?: {
         [eventName: string]: EventLog | EventLog[];
     };
-    status: boolean;
+    status: string;
 }
 export interface Transaction {
     to: string;
@@ -105,20 +81,16 @@ export interface Transaction {
 export interface EventType {
     name: string;
 }
-declare type stringArray = string | _stringArray;
-interface _stringArray extends Array<stringArray> {
-}
 export declare class Utils {
     private wallet;
-    static nullAddress: string;
+    nullAddress: string;
     constructor(wallet: IWallet);
     asciiToHex(str: string): string;
     sleep(millisecond: number): Promise<unknown>;
     numberToBytes32(value: number | BigNumber, prefix?: boolean): string;
     padLeft(string: string, chars: number, sign?: string): string;
     padRight(string: string, chars: number, sign?: string): string;
-    stringToBytes32(value: string | stringArray): string | string[];
-    stringToBytes(value: string | stringArray, nByte?: number): string | string[];
+    stringToBytes32(value: string | string[]): string | string[];
     addressToBytes32(value: string, prefix?: boolean): string;
     bytes32ToAddress(value: string): string;
     bytes32ToString(value: string): string;
@@ -128,4 +100,33 @@ export declare class Utils {
     fromDecimals(value: BigNumber | number | string, decimals?: number): BigNumber;
     toString(value: any): any;
 }
-export { Contract } from "./contract";
+export declare class Contract {
+    wallet: IWallet;
+    _abi: any;
+    _bytecode: any;
+    _address: string;
+    private _events;
+    private _utils;
+    privateKey: string;
+    constructor(wallet: IWallet, address?: string, abi?: any, bytecode?: any);
+    at(address: string): Contract;
+    set address(value: string);
+    get address(): string;
+    protected decodeEvents(receipt: TransactionReceipt): any[];
+    protected parseEvents(receipt: TransactionReceipt, eventName: string): Event[];
+    get events(): EventType[];
+    protected methodsToUtf8(...args: any[]): Promise<string>;
+    protected methodsToUtf8Array(...args: any[]): Promise<string[]>;
+    protected methodsFromWeiArray(...args: any[]): Promise<BigNumber[]>;
+    protected methodsFromWei(...args: any[]): Promise<BigNumber>;
+    protected methods(...args: any[]): Promise<any>;
+    protected getAbiTopics(eventNames?: string[]): any[];
+    protected getAbiEvents(): any;
+    scanEvents(fromBlock: number, toBlock: number | string, eventNames?: string[]): Promise<Event[]>;
+    _deploy(...args: any[]): Promise<string>;
+    get utils(): Utils;
+}
+export declare class TAuthContract extends Contract {
+    rely(address: string): Promise<any>;
+    deny(address: string): Promise<any>;
+}

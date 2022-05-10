@@ -5,37 +5,19 @@ export interface IWalletUtils{
     hexToUtf8(value: string): string;
     toUtf8(value: any): string;		
     toWei(value: string, unit?: string): string;
-    sha3(string): string;
 };
 export interface IWallet {		
     address: string;
     balance: Promise<BigNumber>;
     decode(abi:any, event:Log|EventLog, raw?:{data: string,topics: string[]}): Event;
     decodeLog(inputs: any, hexString: string, topics: any): any;
+    getAbiEvents(abi: any[]): any;
+    getAbiTopics(abi: any[], eventNames: string[]): any[];
+    methods(...args: any): Promise<any>;
     send(to: string, amount: number): Promise<TransactionReceipt>;
     scanEvents(fromBlock: number, toBlock: number | string, topics?: any, events?: any, address?: string|string[]): Promise<Event[]>;
     utils: IWalletUtils;
-
-    getChainId(): Promise<number>;
-    registerEvent(eventMap:{[topics:string]:any}, address: string, handler: any);
-    blockGasLimit(): Promise<number>;
-    getGasPrice(): Promise<BigNumber>;
-    transactionCount(): Promise<number>;
-    sendTransaction(transaction: Transaction): Promise<TransactionReceipt>;
-    sendSignedTransaction(signedTransaction: string): Promise<TransactionReceipt>;
-    getTransactionReceipt(transactionHash: string): Promise<TransactionReceipt>;
-    newContract(abi:any, address?:string): IContract;
-    decodeErrorMessage(msg: string): any;
 };
-export interface IContractMethod {
-    call: any;
-    estimateGas(...params:any[]): Promise<number>;
-    encodeABI(): string;
-}
-export interface IContract {
-    deploy(params: {data: string, arguments?: any[]}): IContractMethod;
-    methods: {[methodName: string]: (...params:any[]) => IContractMethod};
-}
 export interface Event{
     name: string;
     address: string;
@@ -79,14 +61,14 @@ export interface TransactionReceipt {
     blockNumber: number;
     from: string;
     to: string;
-    contractAddress?: string;
+    contractAddress: string;
     cumulativeGasUsed: number;
     gasUsed: number;
     logs ? : Array <Log>;
     events ? : {
         [eventName: string]: EventLog | EventLog[]
     };
-    status: boolean;
+    status: string;
 }
 export interface Transaction{
     to: string;
@@ -96,11 +78,9 @@ export interface Transaction{
 export interface EventType{
     name: string
 }
-type stringArray = string | _stringArray;
-interface _stringArray extends Array<stringArray>{}
 export class Utils {
     private wallet: IWallet;
-    static nullAddress = "0x0000000000000000000000000000000000000000";
+    public nullAddress = "0x0000000000000000000000000000000000000000";
     constructor(wallet: IWallet){
         this.wallet = wallet;
     };
@@ -136,7 +116,7 @@ export class Utils {
     padRight(string: string, chars: number, sign?: string): string{
         return string + new Array(chars - string.length + 1).join(sign ? sign : "0");
     };
-    stringToBytes32(value: string|stringArray): string|string[]{
+    stringToBytes32(value: string|string[]): string|string[]{
         if (Array.isArray(value)){
             let result = [];
             for (let i = 0; i < value.length; i ++){
@@ -148,40 +128,6 @@ export class Utils {
             if (value.length == 66 && value.startsWith('0x'))
                 return value;
             return this.padRight(this.asciiToHex(value),64)
-        }
-    }
-    stringToBytes(value: string|stringArray, nByte?: number): string|string[]{
-        if (Array.isArray(value)){
-            let result = [];
-            for (let i = 0; i < value.length; i ++){
-                result.push(this.stringToBytes(value[i]));
-            }
-            return result;
-        }
-        else{
-            if (nByte){
-                if (new RegExp(`^0x[0-9a-fA-F]{${2*nByte}}$`).test(value))
-                    return value;
-                else if (/^0x([0-9a-fA-F][0-9a-fA-F])*$/.test(value)) {
-                    if (value.length >= ((nByte*2) + 2))
-                        return value;
-                    else
-                        return "0x" + value.substring(2) + "00".repeat(nByte-((value.length-2)/2));
-                } else if (/^([0-9a-fA-F][0-9a-fA-F])+$/.test(value)) {
-                    if (value.length >= (nByte*2))
-                        return value;
-                    else 
-                        return "0x" + value + "00".repeat(nByte-(value.length/2));
-                } else
-                    return this.padRight(this.asciiToHex(value), nByte*2)
-            } else {
-                if (/^0x([0-9a-fA-F][0-9a-fA-F])*$/.test(value))
-                    return value;
-                else if (/^([0-9a-fA-F][0-9a-fA-F])+$/.test(value))
-                    return "0x" + value;
-                else
-                    return this.asciiToHex(value)
-            }
         }
     }
     addressToBytes32(value: string, prefix?: boolean): string{
@@ -226,16 +172,170 @@ export class Utils {
         if (Array.isArray(value)){
             let result = [];
             for (let i = 0; i < value.length; i ++){
-                result.push(this.toString(value[i]));
+                if (typeof value[i] === "number" || BigNumber.isBigNumber(value[i]))
+                    result.push(value[i].toString(10))
+                else
+                    result.push(value[i]);
             }
             return result;
         }
-        else if (typeof value === "number")
+        else if (typeof value === "number" || BigNumber.isBigNumber(value))
             return value.toString(10);
-        else if (BigNumber.isBigNumber(value))
-            return value.toFixed();
         else
             return value;
     };
-}
-export {Contract} from "./contract";
+};
+export class Contract {
+    public wallet: IWallet;
+    public _abi: any;
+    public _bytecode: any;
+    public _address: string;
+    private _events: any;
+    private _utils: Utils;
+    public privateKey: string;
+    
+    constructor(wallet: IWallet, address?: string, abi?: any, bytecode?: any) {            
+        this.wallet = wallet;                        
+        if (typeof(abi) == 'string')
+            this._abi = JSON.parse(abi)
+        else
+            this._abi = abi
+        this._bytecode = bytecode
+        let self = this;
+        if (address)
+            this._address = address;
+    }    
+    at(address: string): Contract {
+        this._address = address;
+        return this;
+    }
+    set address(value: string){
+        this._address = value;
+    }
+    get address(): string{
+        return this._address || '';
+    }
+    protected decodeEvents(receipt: TransactionReceipt): any[]{
+        let events = this.getAbiEvents();
+        let result = [];
+        for (let name in receipt.events){
+            let events = <EventLog[]>( Array.isArray(receipt.events[name]) ? receipt.events[name] : [receipt.events[name]] );
+            events.forEach(e=>{
+                let data = e.raw;
+                let event = events[data.topics[0]];
+                result.push(Object.assign({_name:name, _address:this.address},this.wallet.decodeLog(event.inputs, data.data, data.topics.slice(1))));
+            });
+        }
+        return result;
+    }
+    protected parseEvents(receipt: TransactionReceipt, eventName: string): Event[]{
+        let eventAbis = this.getAbiEvents();
+        let topic0 = this.getAbiTopics([eventName])[0];
+
+        let result = [];
+        if (receipt.events) {
+            for (let name in receipt.events){
+                let events = <EventLog[]>( Array.isArray(receipt.events[name]) ? receipt.events[name] : [receipt.events[name]] );
+                events.forEach(event=>{
+                    if (topic0 == event.raw.topics[0] && (this.address && this.address==event.address)) {
+                        result.push(this.wallet.decode(eventAbis[topic0], event, event.raw));
+                    }
+                });
+            }
+        } else if (receipt.logs) {
+            for (let i = 0 ; i < receipt.logs.length ; i++) {
+                let log = receipt.logs[i];
+                if (topic0 == log.topics[0] && (this.address && this.address==log.address)) {
+                    result.push(this.wallet.decode(eventAbis[topic0], log));
+                }
+            }
+
+        }
+        return result;
+    }
+    get events(): EventType[]{
+        let result = [];
+        for (let i = 0; i < this._abi.length; i ++)	{
+            if (this._abi[i].type == 'event')
+                result.push(this._abi[i])
+        }
+        return result;
+    }
+    protected methodsToUtf8(...args): Promise<string>{
+        let self = this;            
+        return new Promise<string>(async function(resolve, reject){
+            let result = await self.methods.apply(self, args);
+            resolve(self.wallet.utils.toUtf8(result));
+        })
+    }
+    protected methodsToUtf8Array(...args): Promise<string[]>{
+        let self = this;            
+        return new Promise<string[]>(async function(resolve, reject){
+            let result = await self.methods.apply(self, args);
+            let arr = [];
+            for (let i = 0; i < result.length; i ++){
+                arr.push(self.wallet.utils.toUtf8(result[i]))
+            }
+            resolve(arr);
+        })
+    }
+    protected methodsFromWeiArray(...args): Promise<BigNumber[]>{            
+        let self = this;            
+        return new Promise<BigNumber[]>(async function(resolve, reject){
+            let result = await self.methods.apply(self, args)
+            let arr = [];
+            for (let i = 0; i < result.length; i ++){
+                arr.push(new BigNumber(self.wallet.utils.fromWei(result[i])))
+            }
+            resolve(arr);
+        })
+    }
+    protected methodsFromWei(...args): Promise<BigNumber>{            
+        let self = this;
+        return new Promise<BigNumber>(async function(resolve, reject){
+            let result = await self.methods.apply(self, args);
+            return resolve(new BigNumber(self.wallet.utils.fromWei(result)));
+        })
+    }
+    protected methods(...args): Promise<any>{
+        args.unshift(this._address);
+        args.unshift(this._abi);
+        return this.wallet.methods.apply(this.wallet, args);
+    }
+    protected getAbiTopics(eventNames?: string[]){
+        return this.wallet.getAbiTopics(this._abi, eventNames);
+    }
+    protected getAbiEvents(){
+        if (!this._events)
+            this._events = this.wallet.getAbiEvents(this._abi);
+        return this._events;
+    }
+    scanEvents(fromBlock: number, toBlock: number|string, eventNames?: string[]): Promise<Event[]>{
+        let topics = this.getAbiTopics(eventNames);
+        let events = this.getAbiEvents();
+        return this.wallet.scanEvents(fromBlock, toBlock, topics, events, this._address);
+    };
+    async _deploy(...args): Promise<string>{
+        if (typeof(args[args.length-1]) == 'undefined')
+            args.pop();
+        args.unshift(this._bytecode);
+        args.unshift('deploy');
+        args.unshift(null);
+        args.unshift(this._abi);
+        this._address = await this.wallet.methods.apply(this.wallet, args);
+        return this._address;
+    };
+    get utils(): Utils{
+        if (!this._utils)
+            this._utils = new Utils(this.wallet);
+        return this._utils;
+    }
+};
+export class TAuthContract extends Contract {
+    rely(address: string): Promise<any>{
+        return this.methods('rely', address)
+    }
+    deny(address: string): Promise<any>{
+        return this.methods('deny', address)
+    }
+};
