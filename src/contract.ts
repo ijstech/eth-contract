@@ -1,4 +1,4 @@
-import {IWallet, IContract, IContractMethod, Transaction, TransactionReceipt, Event, Log, EventLog, Utils, BigNumber} from "./";
+import {IWallet, IContract, IContractMethod, Transaction, TransactionReceipt, Event, Log, EventLog, Utils, BigNumber} from "./index";
 
 module Contract {
     export interface EventType{
